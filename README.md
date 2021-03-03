@@ -1,1 +1,1 @@
-# Unterlagen zum Modul Compilerbau
+# Modul Compilerbau
