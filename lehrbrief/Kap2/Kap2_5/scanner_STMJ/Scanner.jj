@@ -1,0 +1,95 @@
+options {
+}
+
+PARSER_BEGIN(Scanner)
+    package Kap2.Kap2_5.scanner_STMJ;
+
+    import java.io.File;
+    import java.io.FileReader;
+    import java.io.IOException;
+    import java.util.*;
+
+    public class Scanner {
+        public static void main(String[] args) throws IOException {
+            Scanner scanner = null;
+            try {
+                scanner = new Scanner(new FileReader(new File("Kap2/Kap2_5/test/STMJ_ex1.stjava")));
+            	// do something with the tokens
+				Token t;
+				while (true) {
+					t = scanner.getNextToken();
+					if (t.kind == ScannerConstants.EOF) break;
+					System.out.println(t);
+				}    
+             } catch (Exception e) {
+               System.out.println(e);
+             }
+        }
+    }
+PARSER_END(Scanner)
+
+<DEFAULT> TOKEN : {
+		<OpenBlock: "{">
+  |     <CloseBlock: "}">
+  |     <OpenParen: "(">
+  |     <CloseParen: ")">
+  |     <Dot: ".">
+  |     <semicolon: ";">
+  |     <If: "if">
+  |     <Else: "else">
+  |     <New: "new">
+  |     <Do: "do">
+  |     <While: "while">
+  |     <Return: "return">
+  |     <StringTemplate: "stringtemplate">
+  |     <Class: "class">
+  |     <Public: "public">
+  |     <Private: "private">
+  |     <Static: "static">
+  |     <Int: "int">
+  |     <VoidT: "void">
+  |     <DoubleT: "double">
+  |     <StringT: "String">
+  |     <Char: "char">
+  |     <BooleanT: "boolean">
+  |      <BooleanLiteral: "true" | "false">
+  |      <Println: "System.out.println">
+  |      <Print: "System.out.print">
+  |      <StringLiteral: "\"" (~["\n"])* "\"">
+  |      <CharLiteral: "'" ~["\n"] "'">
+  |      <#Num: ["0"-"9"]>
+  |      <IntegerLiteral: ["1"-"9"](<Num>)* | "0">
+  |      <DoubleLiteral: <IntegerLiteral> "." (<Num>)* | "." (<Num>)+>
+  |      <IncOperator: "++" | "- -">
+  |      <MultOperator: "*" | "/" | "%">
+  |      <AddOperator: "+" | "-">
+  |      <AndOperator: "&&">
+  |      <OrOperator: "||">
+  |      <NotOperator: "!">
+  |      <CompOperator: ">" | "<" | "==" | ">=" | "<=" | "!=">
+  |      <AssignOperator: "=">
+  |      <Identifier: ["a"-"z", "A"-"Z", "_"] (["a"-"z", "A"-"Z", "_"]|<Num>)*>
+}
+
+<DEFAULT> SKIP : {
+        <#WhiteSpace: "\t" | " ">
+  |     < (<WhiteSpace> | "\n")+ >
+  |     <"/*"> : INCOMMENT
+  |     <"//" (~["\n"])* >
+}
+
+<DEFAULT> TOKEN: {
+    <StartStringTemplate: (<WhiteSpace>)* "!{" (<WhiteSpace>)* "\n"> : INSIDE
+}
+
+<INCOMMENT> SKIP:{
+     <"*/"> :  DEFAULT
+     | <~[]>
+}
+
+<INSIDE> TOKEN: {
+    <String: (~["<","!"])+ | "<" | "!">
+|   <Variable: "<" <Identifier> ">">
+|   <VariableWithSep: "<" <Identifier> ":" (~[">"])+ ">">
+|   <EndStringTemplate: (<WhiteSpace>)* "!}" (<WhiteSpace>)* "\n"> : DEFAULT
+}

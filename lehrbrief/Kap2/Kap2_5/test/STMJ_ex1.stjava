@@ -1,0 +1,15 @@
+public class STMJ_ex1 {
+
+	stringtemplate FehlerMeldung
+	!{
+		Ein <fehler> Fehler ist aufgetreten.
+	!}
+
+	public static void main() {
+		FehlerMeldung fm;
+		fm.fehler = "schlimmer";
+		System.out.print(ersteFehlerMeldung);
+	}
+
+}
+

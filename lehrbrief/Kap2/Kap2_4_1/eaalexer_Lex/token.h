@@ -1,0 +1,13 @@
+#define KlammerAuf 1
+#define KlammerZu 2
+#define Bezeichner 3
+#define IntegerLiteral 4
+#define DoubleLiteral 5
+#define ModuloOperator 6
+#define Division 7
+#define Multiplikation 8
+#define PlusSymbol 9
+#define MinusSymbol 10
+#define Exponentiation 11
+#define TypeModifier 12
+#define MEOF 13
