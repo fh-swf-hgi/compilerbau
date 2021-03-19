@@ -9,6 +9,7 @@ $(pname): lex.yy.c
 	gcc lex.yy.c -o $(pname)
 
 run: $(pname)
+	chmod +x $(pname)
 	./$(pname) < lex.yy.c
 
 .PHONY: clean default run
