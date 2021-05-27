@@ -1,0 +1,86 @@
+options {
+    MULTI = true;
+    NODE_DEFAULT_VOID = true;
+}
+PARSER_BEGIN(EaAParser)
+    import java.io.File;
+    import java.io.FileReader;
+    import java.io.IOException;
+    import java.util.*;
+
+    public class EaAParser {
+        public static void main(String[] args) {
+            if (args.length == 0) {
+              System.out.println("usage: parser filename");
+              return ;
+            }
+            try {
+                  EaAParser parser=new EaAParser(new FileReader(new File(args[0])));
+                  try {
+                        parser.compilationUnit();
+                        ((SimpleNode)jjtree.rootNode()).dump(">");
+
+                  } catch (ParseException ex) {
+                        System.out.println(ex);
+                  }
+            } catch (Exception e) {
+                        System.out.println(e);
+            }
+        }
+    }
+PARSER_END(EaAParser)
+
+TOKEN : {
+	<#Alpha: ["a"-"z","A"-"Z"]>
+  |	<#Digit: ["0"-"9"]>
+  |	<#Expo: ["e","E"]("+"|"-")?(<Digit>)+>
+  |	<Bezeichner: <Alpha>(<Digit>|<Alpha>)*>
+  |	<TypKonverter: "!">
+  |	<KlammerAuf: "(">
+  |	<KlammerZu: ")">
+  |	<IntegerLiteral: (<Digit>)+>
+  |	<DoubleLiteral: ((<Digit>)+"."(<Digit>)*(<Expo>)?)
+			   | ((<Digit>)*"."(<Digit>)+(<Expo>)?)>
+  |	<PlusSymbol: "+">
+  |	<MinusSymbol: "-">
+  |	<Multiplikation: "*">
+  |	<Division: "/">
+  |	<ModuloOperator: "%">
+  |	<Exponentiation: "^">
+ }
+
+SKIP : { " " | "\t" | "\r" | "\n" }
+
+public void compilationUnit() : {
+	System.out.println("Start parsing");
+} {
+    expr() <EOF>
+}
+
+public void expr() #Expr(>1) : {} {
+    prod() ((<PlusSymbol>|<MinusSymbol>) prod())*
+}
+
+public void prod() #Prod(>1) : {} {
+    expo() ((<Multiplikation> | <Division> | <ModuloOperator>) expo())*
+}
+
+public void expo() #Expo(>1) : {} {
+    sign() (<Exponentiation> sign())*
+}
+
+public void sign() : {
+    Token t;
+} {
+    ((t=<TypKonverter> | t=<PlusSymbol> | t=<MinusSymbol>) {jjtThis.value=t.image; } #Sign(true) )* atom()
+}
+
+public void atom() : {
+    Token t;
+} {
+    t=<IntegerLiteral> { jjtThis.value= t.image; } #IntLiteral(true)
+    | t=<DoubleLiteral> { jjtThis.value = t.image; } #DoubleLiteral(true)
+    | t=<Bezeichner> { jjtThis.value = t.image; } #Identifier(true)
+    | <KlammerAuf> expr() <KlammerZu>
+}
+

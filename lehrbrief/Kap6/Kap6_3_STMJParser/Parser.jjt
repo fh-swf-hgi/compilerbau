@@ -1,0 +1,345 @@
+options {
+   MULTI = true;
+   NODE_DEFAULT_VOID = true;
+   TRACK_TOKENS = true;
+   STATIC = false;
+}
+
+PARSER_BEGIN(STMJ)
+    package Kap6.Kap6_3_STMJParser;
+
+    import java.io.File;
+    import java.io.FileReader;
+    import java.io.IOException;
+    import java.util.*;
+
+    public class STMJ {
+        List<ErrorCompiler> errors = new LinkedList<ErrorCompiler>();
+
+        public static void main(String[] args) throws IOException {
+            STMJ parser = null;
+            try {
+                parser=new STMJ(new FileReader(
+                        new File("Kap6/Kap6_3_STMJParser/Test.stmj")
+                      ));
+                try {
+                    parser.compilationUnit();
+                } catch (ParseException pe) {
+                    parser.errors.add(new ErrorSyntax(null, pe.getMessage()));
+                }
+            } catch (TokenMgrError e) {
+                parser.errors.add(new ErrorLex(null, e.getMessage()));
+            }
+            if (parser.errors.size()==0)
+                ((SimpleNode)parser.jjtree.rootNode()).dump(">");
+            for (ErrorCompiler error: parser.errors)
+                System.out.println(error);
+        }
+    }
+PARSER_END(STMJ)
+
+<DEFAULT> TOKEN : {
+        <If: "if">
+  |     <Else: "else">
+  |     <New: "new">
+  |     <Do: "do">
+  |     <While: "while">
+  |     <Return: "return">
+  |     <StringTemplate: "stringtemplate">
+  |     <Class: "class">
+  |     <Public: "public">
+  |     <Private: "private">
+  |     <Static: "static">
+  |     <Int: "int">
+  |     <VoidT: "void">
+  |     <DoubleT: "double">
+  |     <StringT: "String">
+  |     <Char: "char">
+  |     <BooleanT: "boolean">
+  |      <BooleanLiteral: "true" | "false">
+  |      <Println: "System.out.println">
+  |      <Print: "System.out.print">
+  |      <StringLiteral: "\"" (~["\n"])* "\"">
+  |      <CharLiteral: "'" ~["\n"] "'">
+  |      <#Num: ["0"-"9"]>
+  |      <IntegerLiteral: ["1"-"9"](<Num>)* | "0">
+  |      <DoubleLiteral: <IntegerLiteral> "." (<Num>)* | "." (<Num>)+>
+  |      <IncOperator: "++" | "- -">
+  |      <MultOperator: "*" | "/" | "%">
+  |      <AddOperator: "+" | "-">
+  |      <AndOperator: "&&">
+  |      <OrOperator: "||">
+  |      <NotOperator: "!">
+  |      <CompOperator: ">" | "<" | "==" | ">=" | "<=" | "!=">
+  |      <AssignOperator: "=">
+  |      <Identifier: ["a"-"z", "A"-"Z"] (["a"-"z", "A"-"Z"]|<Num>)*>
+}
+
+<DEFAULT> SKIP : {
+        <#WhiteSpace: "\t" | " ">
+  |     < (<WhiteSpace> | "\n")+ >
+  |     <"/*"> : INCOMMENT
+  |     <"//" (~["\n"])* >
+}
+
+<DEFAULT> TOKEN: {
+    <StartStringTemplate: (<WhiteSpace>)* "!{" (<WhiteSpace>)* "\n"> : INSIDE
+}
+
+<INCOMMENT> SKIP:{
+     <"*/"> :  DEFAULT
+     | <~[]>
+}
+
+<INSIDE> TOKEN: {
+    <String: (~["<","!"])+ | "<" | "!">
+|   <Variable: "<" <Identifier> ">">
+|   <VariableWithSep: "<" <Identifier> ":" (~[">"])+ ">">
+|   <EndStringTemplate: (<WhiteSpace>)* "!}" (<WhiteSpace>)* "\n"> : DEFAULT
+}
+
+JAVACODE
+void skipTo(ParseException e, SimpleNode n) {
+   Set<Integer> kindSet = new java.util.HashSet();
+   kindSet.add(Class);
+   kindSet.add(StringTemplate);
+   kindSet.add(EOF);
+   Token t;
+   errors.add(new ErrorSyntax(n, e.getMessage()));
+   do { t = getNextToken();
+   } while (!kindSet.contains(t.kind));
+}
+
+public void compilationUnit() #CompilationUnit : {} {
+    ( try {
+            classDecl() | stringTemplateDecl()
+      } catch (ParseException e)
+      {
+        skipTo(e, jjtThis);
+      }
+    )* <EOF>
+}
+
+public void stringTemplateDecl() #StringTemplate : {
+    Token t;
+} {
+    <StringTemplate> t=<Identifier>
+    <StartStringTemplate> (stringTemplateElement(jjtThis))* <EndStringTemplate>
+    { jjtThis.setName(t.image); }
+}
+
+public void stringTemplateElement(ASTStringTemplate st) : {
+    Token t;
+} {
+    t = <String> { st.add(new TemplateString(t.image)); }
+    | t = <Variable> { st.add(new TemplateVariable(t.image)); }
+    | t = <VariableWithSep> { st.add(new TemplateVariableSep(t.image)); }
+}
+
+public void classDecl() #Class : {
+    Token t;
+    boolean isPrivate = false;
+    Node n = null;
+} {
+   <Class> t=<Identifier> "{"
+   (
+    (<Public> | <Private> { isPrivate=true;})?
+    (<Static> type() { n = jjtree.popNode();} methodDecl(n, isPrivate, true))
+    | LOOKAHEAD(2) (type() { n = jjtree.popNode();}
+      (LOOKAHEAD(2) attributeDecl(n, isPrivate) | methodDecl(n, isPrivate, false)))
+    | constructorDecl(isPrivate)
+   )*
+   "}" { jjtThis.setName(t.image); }
+}
+public void attributeDecl(Node n, boolean isPrivate) #Attribute : {
+    Token t, op;
+}{
+   {jjtree.pushNode(n); jjtThis.setPrivate(isPrivate); }
+   t=<Identifier> ";"  { jjtThis.setName(t.image);  }
+}
+public void methodDecl(Node n, boolean isPrivate, boolean isStatic) #Method : {
+    Token t;
+}{
+    { jjtThis.setStatic(isStatic); jjtree.pushNode(n); jjtThis.setPrivate(isPrivate); }
+    t=<Identifier> "(" parameterList() ")" methodblock()
+    { jjtThis.setName(t.image); }
+}
+public void constructorDecl(boolean isPrivate) #Constructor : {
+    Token t;
+}{
+    t=<Identifier> "(" parameterList() ")" methodblock()
+    { jjtThis.setName(t.image); jjtThis.setPrivate(isPrivate);}
+}
+public void type() #ArrayType: {
+}{
+     singleType()
+     (LOOKAHEAD(2) "[" "]" { jjtThis.incDimension(); } )*
+}
+
+public void singleType() #Type : {
+    Token t;
+} {
+    ( <BooleanT> { jjtThis.setKind(ASTType.AstTypes.BOOLEAN); }
+      | <DoubleT> { jjtThis.setKind(ASTType.AstTypes.DOUBLE); }
+      | <Int> { jjtThis.setKind(ASTType.AstTypes.INT); }
+      | <VoidT> { jjtThis.setKind(ASTType.AstTypes.VOID); }
+      | <StringT> { jjtThis.setKind(ASTType.AstTypes.STRING); }
+      | t=<Identifier> { jjtThis.setKind(ASTType.AstTypes.USER); jjtThis.setName(t.image); }
+   )
+}
+public void parameterList() : {} {
+   ( parameter() ("," parameter())*)?
+}
+public void parameter() #Parameter : {
+    Token t;
+} {
+    type() t=<Identifier> { jjtThis.setName(t.image); }
+}
+public void block() #Block : {} {
+  "{" (LOOKAHEAD(2) variableDecl() | statement())* "}"
+}
+public void methodblock() #MethodBlock : {} {
+  "{" (LOOKAHEAD(2) variableDecl() | statement())* "}"
+}
+public void variableDecl() #Variable : {
+    Token t, op;
+}{
+    type() t= <Identifier> ";" { jjtThis.setName(t.image); }
+}
+public void statement() : {} {
+    exprStatement() | block() | ifStatement() | whileStatement() | doWhileStatement()
+    | returnStatement() | ";" #EmptyStatement
+}
+public void exprStatement() #ExprStatement : {}{
+    expr() ";"
+}
+public void ifStatement() #If : {} {
+    <If> "(" expr() ")" statement() (LOOKAHEAD(1) <Else> statement())?
+}
+public void whileStatement() #While : {} {
+    <While> "(" expr() ")" statement()
+}
+public void doWhileStatement() #DoWhile : {} {
+    <Do> statement() <While> "(" expr() ")" ";"
+}
+public void returnStatement() #Return : {} {
+    <Return> (expr())? ";"
+}
+public void expr() #Assignment(>1) : {
+    Token t;
+} {
+    logicalOrExpr() (t=<AssignOperator> logicalOrExpr())*
+}
+public void logicalOrExpr() #Logical(>1) : {
+    Token t;
+} {
+    logicalAndExpr() (t=<OrOperator> logicalAndExpr() { jjtThis.addOperator(t.image); })*
+}
+public void logicalAndExpr() #Logical(>1) : {
+    Token t;
+} {
+    compExpr() (t=<AndOperator> compExpr() { jjtThis.addOperator(t.image); })*
+}
+public void compExpr() #Comp(>1) : {
+    Token t;
+} {
+    sum() (t=<CompOperator> sum() { jjtThis.setOperator(t.image); })?
+}
+public void sum() #Arithmetic(>1) : {
+    Token t;
+} {
+    product() (t=<AddOperator> product() { jjtThis.addOperator(t.image); })*
+}
+public void product() #Arithmetic(>1) : {
+    Token t;
+} {
+    sign() (t=<MultOperator> sign() { jjtThis.addOperator(t.image); })*
+}
+
+public void sign() : {} {
+  atom()
+  | preInc()
+  | notOp()
+  | signOp()
+}
+public void signOp() #Sign : {
+    Token t;
+}{
+  t=<AddOperator> sign() { jjtThis.setOperator(t.image); }
+}
+public void notOp() #Not : { }{
+  <NotOperator> sign()
+}
+public void preInc() #Pre : {
+    Token t;
+}{
+  t=<IncOperator> atom() { jjtThis.operator=t.image; }
+}
+public void postInc(Node n) #Post : {
+    Token t;
+}{
+  { jjtree.pushNode(n); }
+  t=<IncOperator> { jjtThis.setOperator(t.image); }
+}
+public void atom() : {
+    Node n;
+} {
+  ( newOp()
+  | methodCallOrVariableUse(null)
+  | "(" expr() ")"
+  | literal()
+  )
+  { n = jjtree.popNode(); }
+  ( deReferenz(n) { n=jjtree.popNode(); } | arrayAcc(n) { n=jjtree.popNode(); } )* { jjtree.pushNode(n); }
+}
+public void arrayAcc(Node n) #ArrayAcc : {} {
+    {jjtree.pushNode(n); } "[" expr() "]"
+}
+public void deReferenz(Node n) #Deref : {}{
+  { jjtree.pushNode(n); } "." methodCallOrVariableUse(n)
+}
+public void methodCallOrVariableUse(Node n) : {
+    Token t;
+}{
+   LOOKAHEAD(2) methodCall(n) | variableUse(n)
+}
+public void variableUse(Node n) #VariableUse : {
+    Token t;
+}{
+   t = <Identifier> { jjtThis.setDeref(n); jjtThis.setName(t.image); }
+}
+public void methodCall(Node n) #MethodCall : {
+    Token t;
+} {
+   (t = <Identifier> | t=<Println> | t=<Print> )
+   "(" argumentList() ")" { jjtThis.setName(t.image); jjtThis.setDeref(n); }
+}
+public void literal() #Literal : {
+    Token t;
+} {
+  t=<BooleanLiteral> { jjtThis.setKind(ASTType.AstTypes.BOOLEAN); jjtThis.setContent(t.image); }
+  | t=<DoubleLiteral> { jjtThis.setKind(ASTType.AstTypes.DOUBLE); jjtThis.setContent(t.image); }
+  | t=<CharLiteral>  { jjtThis.setKind(ASTType.AstTypes.CHAR); jjtThis.setContent(t.image); }
+  | t=<IntegerLiteral> { jjtThis.setKind(ASTType.AstTypes.INT); jjtThis.setContent(t.image); }
+  | t=<StringLiteral> { jjtThis.setKind(ASTType.AstTypes.STRING); jjtThis.setContent(t.image); }
+}
+
+public void newOp() : {
+    Node n;
+} {
+    <New> singleType() { n = jjtree.popNode(); } (newArray(n) | newObject(n))
+}
+public void newObject(Node n) #New : {} {
+    {jjtree.pushNode(n); } "(" argumentList() ")"
+}
+public void newArray(Node n) #NewArray : {} {
+    {jjtree.pushNode(n); } "[" (expr()) "]"
+     (
+      LOOKAHEAD(2) "[" (expr()) "]" { jjtThis.incResDim(); }
+     )*
+     (LOOKAHEAD(2) "[" "]" { jjtThis.incUnresDim(); })*
+}
+public void argumentList() : {} {
+    ( expr() ( "," expr() )* )?
+}
+

@@ -1,0 +1,79 @@
+options {
+
+}
+PARSER_BEGIN(EaAParser)
+    import java.io.File;
+    import java.io.FileReader;
+    import java.io.IOException;
+    import java.util.*;
+
+    public class EaAParser {
+        public static void main(String[] args) {
+            if (args.length == 0) {
+              System.out.println("usage: parser filename");
+              return ;
+            }
+            try {
+                  EaAParser parser=new EaAParser(new FileReader(
+                                new File(args[0])
+                              ));
+                  try {
+                        parser.compilationUnit();
+                  } catch (ParseException ex) {
+                        System.out.println(ex);
+                  }
+            } catch (Exception e) {
+                        System.out.println(e);
+            }
+        }
+    }
+PARSER_END(EaAParser)
+
+TOKEN : {
+	<#Alpha: ["a"-"z","A"-"Z"]>
+  |	<#Digit: ["0"-"9"]>
+  |	<#Expo: ["e","E"]("+"|"-")?(<Digit>)+>
+  |	<Bezeichner: <Alpha>(<Digit>|<Alpha>)*>
+  |	<TypKonverter: "!">
+  |	<KlammerAuf: "(">
+  |	<KlammerZu: ")">
+  |	<IntegerLiteral: (<Digit>)+>
+  |	<DoubleLiteral: ((<Digit>)+"."(<Digit>)*(<Expo>)?)
+			   | ((<Digit>)*"."(<Digit>)+(<Expo>)?)>
+  |	<PlusSymbol: "+">
+  |	<MinusSymbol: "-">
+  |	<Multiplikation: "*">
+  |	<Division: "/">
+  |	<ModuloOperator: "%">
+  |	<Exponentiation: "^">
+ }
+
+SKIP : { " " | "\t" | "\r" | "\n" }
+
+public void compilationUnit() : {
+	System.out.println("Start parsing");
+} {
+    expr() <EOF>
+	
+}
+
+public void expr() : {} {
+    prod() ((<PlusSymbol>|<MinusSymbol>) prod())*
+}
+
+public void prod() : {} {
+    expo() ((<Multiplikation> | <Division> | <ModuloOperator>) expo())*
+}
+
+public void expo() : {} {
+    sign() (<Exponentiation> sign())*
+}
+
+public void sign() : {} {
+    (<TypKonverter> | <PlusSymbol> | <MinusSymbol>)* atom()
+}
+
+public void atom() : {} {
+    <IntegerLiteral> | <DoubleLiteral> | <Bezeichner> | <KlammerAuf> expr() <KlammerZu>
+}
+

@@ -1,0 +1,4 @@
+stringtemplate FehlerMeldung
+!{
+Ein <fehlerA:, > ist aufgetreten.
+!}
