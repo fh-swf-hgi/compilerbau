@@ -63,6 +63,19 @@ runKap3: Kap3/Kap3_4/scanner/Scanner.class
 
 
 ###############################################
+########### K A P I T E L   5 #################
+###############################################
+
+Kap5/Kap5_3/ast/Exp.class: Kap5/Kap5_3/ast/Exp.java
+	javac Kap5/Kap5_3/ast/*.java
+
+Kap5/Kap5_3/parser/Parser.class: Kap5/Kap5_3/parser/Parser.java
+	javac Kap5/Kap5_3/parser/Parser.java
+
+runKap5: Kap5/Kap5_3/parser/Parser.class
+	java Kap5/Kap5_3/parser/Parser
+
+###############################################
 ########### K A P I T E L   6 #################
 ###############################################
 
@@ -122,6 +135,8 @@ allclean:
 	rm -f Kap2/Kap2_5/scanner_STMJ/*.java
 	rm -f Kap2/Kap2_4_2/eaalexer/*.java
 	rm -f Kap2/Kap2_4_1/eaalexer_Lex/lex.yy.c Kap2/Kap2_4_1/eaalexer_Lex/EaA.exe
+	rm -f Kap5/Kap5_3/ast/*.class
+	rm -f Kap5/Kap5_3/parser/*.class
 	rm -f Kap6/Kap6_1_EaAParser_Yacc/EaA_yacc_parser
 	rm -f Kap6/Kap6_1_EaAParser_Yacc/lex.yy.c
 	rm -f Kap6/Kap6_1_EaAParser_Yacc/y.tab.*
@@ -133,7 +148,6 @@ allclean:
 	rm -f Kap6/Kap6_2_3_EaAParserAst_JavaCC/*.class
 	rm -f Kap6/Kap6_3_STMJParser/*.jj
 	rm -f Kap6/Kap6_3_STMJParser/*.class
-
 
 
 
