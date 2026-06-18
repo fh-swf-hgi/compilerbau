@@ -1,17 +1,32 @@
-pname=$(notdir $(CURDIR))
+APP      := comments
+LEX      := flex
+CC       := gcc
 
-default: run
+SRC_L    := comments.l
+GEN_C    := lex.yy.c
+BIN      := $(APP)
+INPUT    := primzahltest.c
 
-lex.yy.c: $(pname).l
-	flex $(pname).l
+CFLAGS   := -Wall -Wextra -O2
+LDLIBS   := -lfl
 
-$(pname): lex.yy.c
-	gcc lex.yy.c -o $(pname)
+.PHONY: all run clean help
 
-run: $(pname)
-	./$(pname) < primzahltest.c
+all: $(BIN)
 
-.PHONY: clean default run
+help:
+	@echo "make        - baut den Scanner"
+	@echo "make run    - startet mit stdin-Umleitung aus $(INPUT)"
+	@echo "make clean  - löscht erzeugte Dateien"
+
+$(GEN_C): $(SRC_L)
+	$(LEX) -o $@ $<
+
+$(BIN): $(GEN_C)
+	$(CC) $(CFLAGS) $< -o $@ $(LDLIBS)
+
+run: $(BIN)
+	./$(BIN) < $(INPUT)
 
 clean:
-	rm -f lex.yy.c $(pname)
+	rm -f $(GEN_C) $(BIN)

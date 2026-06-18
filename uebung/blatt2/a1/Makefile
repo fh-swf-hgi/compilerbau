@@ -39,4 +39,4 @@ $(OUT_RAW): $(SRC)
 	$(CLANG) -cc1 -dump-raw-tokens $(SRC) > $@
 
 clean:
-	rm -f $(OUT_TOKENS) $(OUT_RAW)
+	rm -f $(OUT_TOKENS) $(OUT_RAW) $(SRC).*
