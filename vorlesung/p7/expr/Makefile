@@ -1,17 +1,46 @@
-pname=calc
-fname=$(pname)$(VERSION)
+CC = gcc
+CFLAGS = -Wall -std=gnu11
+LDLIBS = -ll -ly
 
-.PHONY: clean
+PARSER = parser
+SOURCES = main.c ast.c semantic.c symbols.c types.c y.tab.c lex.yy.c
 
-$(pname): clean y.tab.c lex.yy.c
-	gcc y.tab.c lex.yy.c -o $(pname) -ll -ly
+.PHONY: all run test test-widening ast clean
 
-y.tab.h y.tab.c: $(fname).y
-	bison -y -d --graph $(fname).y
+all: $(PARSER)
 
-lex.yy.c: $(fname).l
-	flex $(fname).l
+run: $(PARSER)
+	./$(PARSER) testfile
+	dot ast.dot -Tpng > ast.png
 
+test: $(PARSER)
+	@echo "== ok-simple =="
+	@./$(PARSER) tests/ok-simple.expr
+	@echo
+	@echo "== ok-mixed =="
+	@./$(PARSER) tests/ok-mixed.expr
+	@echo
+	@echo "== error-reassign =="
+	@./$(PARSER) tests/error-reassign.expr || true
+	@echo
+	@echo "== error-unknown =="
+	@./$(PARSER) tests/error-unknown.expr || true
+
+test-widening: $(PARSER)
+	@echo "== widening =="
+	@echo "Dieser Test soll nach der Erweiterung der Zuweisungsregel erfolgreich sein."
+	@./$(PARSER) tests/widening.expr
+
+ast: run
+
+$(PARSER): y.tab.c lex.yy.c main.c ast.c ast.h semantic.c semantic.h symbols.c symbols.h types.c types.h parser.h
+	$(CC) $(CFLAGS) $(SOURCES) -o $(PARSER) $(LDLIBS)
+
+y.tab.h y.tab.c: parser.y ast.h symbols.h parser.h
+	bison -y -d parser.y
+
+lex.yy.c: parser.l y.tab.h ast.h symbols.h
+	flex parser.l
 
 clean:
-	rm -f y.tab.h y.tab.c lex.yy.c $(pname)
+	rm -f y.tab.h y.tab.c lex.yy.c $(PARSER) ast.dot ast.png
